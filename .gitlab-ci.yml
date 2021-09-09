@@ -1,0 +1,109 @@
+image: docker:latest
+
+services:
+- docker:dind
+
+before_script:
+  - apk add --update py-pip
+  - pip install awscli
+  - apk update && apk add openssh
+  - apk update && apk add bash
+  # - $(aws ecr get-login --no-include-email --region "${REGION}")
+  # - docker login -u gitlab-ci-token -p \$CI_JOB_TOKEN registry.gitlab.com
+  - IMAGE_TAG="$(echo $CI_COMMIT_SHA | head -c 8)"
+  - export IMAGE_TAG=$IMAGE_TAG
+
+stages:
+  - create-vpc-ecr
+  - build-image
+  - deploy-ecs
+
+#=====================Dev Environment=================================
+create-vpc-ecr-dev:
+  stage: create-vpc-ecr
+  script:
+    - export REGION=$AWS_DEFAULT_REGION
+    - export ENV=dev
+    - chmod +x ./scripts/deploy-vpc-ecr.sh
+    - ./scripts/deploy-vpc-ecr.sh
+  only:
+    - develop
+  when: manual
+
+build-image-dev:
+  stage: build-image
+  script:
+    - export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+    - export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+    - export REGION=$AWS_DEFAULT_REGION
+    - export ENV=dev
+    - $(aws ecr get-login --no-include-email --region "${REGION}")
+    - chmod +x ./scripts/build-image.sh
+    - ./scripts/build-image.sh
+  only:
+    - develop
+  artifacts:
+    paths:
+      - api/
+      - awsTemplates/
+      - middleware/
+      - services/
+  when: manual
+
+deploy-ecs-dev:
+  stage: deploy-ecs
+  script:
+    - export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+    - export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+    - export REGION=$AWS_DEFAULT_REGION
+    - export ENV=dev
+    - chmod +x ./scripts/deploy-ecs.sh
+    - ./scripts/deploy-ecs.sh
+  only:
+    - develop
+  when: manual
+
+#======================Prod Environment============================
+create-vpc-ecr-prod:
+  stage: create-vpc-ecr
+  script:
+    - export REGION=$AWS_DEFAULT_REGION
+    - export ENV=dev
+    - chmod +x ./scripts/deploy-vpc-ecr.sh
+    - ./scripts/deploy-vpc-ecr.sh
+  only:
+    - tags
+  when: manual
+
+build-image-prod:
+  stage: build-image
+  script:
+    - export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+    - export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+    - export REGION=$AWS_DEFAULT_REGION
+    - export ENV=dev
+    - $(aws ecr get-login --no-include-email --region "${REGION}")
+    - chmod +x ./scripts/build-image.sh
+    - ./scripts/build-image.sh
+  only:
+    - tags
+  artifacts:
+    paths:
+      - api/
+      - awsTemplates/
+      - middleware/
+      - services/
+  when: manual
+
+deploy-ecs-prod:
+  stage: deploy-ecs
+  script:
+    - export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+    - export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+    - export REGION=$AWS_DEFAULT_REGION
+    - export ENV=dev
+    - chmod +x ./scripts/deploy-ecs.sh
+    - ./scripts/deploy-ecs.sh
+  only:
+    - tags
+  when: manual

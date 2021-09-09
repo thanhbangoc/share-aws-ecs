@@ -1,0 +1,99 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'This template deploys a VPC and ECR Repo'
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 172.16.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Join ['', [!Ref "AWS::StackName", "-VPC" ]]
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    DependsOn: VPC
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 172.16.1.0/25
+      AvailabilityZone: !Select [ 0, !GetAZs ]    # Get the first AZ in the list       
+      Tags:
+      - Key: Name
+        Value: !Join ['', [!Ref "AWS::StackName", "-Public-subnet-A" ]]
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 172.16.2.0/25
+      AvailabilityZone: !Select [ 1, !GetAZs ]    # Get the first AZ in the list 
+      Tags:
+      - Key: Name
+        Value: !Join ['', [!Ref "AWS::StackName", "-Private-subnet-B" ]]
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Join ['', [!Ref "AWS::StackName", "-Public-route-table" ]]
+  PublicRoute:   # Public route table has direct routing to IGW:
+    Type: AWS::EC2::Route
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+  
+  # Attach the public subnets to public route tables, and attach the private subnets to private route tables:   
+  PublicSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetA
+      RouteTableId: !Ref PublicRouteTable
+  EcrRepository: 
+    Type: AWS::ECR::Repository
+    Properties: 
+      RepositoryName: !Ref "AWS::StackName"
+      RepositoryPolicyText: 
+        Version: "2012-10-17"
+        Statement: 
+          - Sid: AllowPushPull
+            Effect: Allow
+            Principal: 
+              AWS:
+                - Fn::Join:
+                  - ''
+                  - - 'arn:aws:iam::'
+                    - Ref: AWS::AccountId
+                    - ":user/"
+                    - thanhbabe
+            Action: 
+              - "ecr:GetDownloadUrlForLayer"
+              - "ecr:BatchGetImage"
+              - "ecr:BatchCheckLayerAvailability"
+              - "ecr:PutImage"
+              - "ecr:InitiateLayerUpload"
+              - "ecr:UploadLayerPart"
+              - "ecr:CompleteLayerUpload"
+Outputs:
+  VPC:
+    Value: !Ref VPC
+  PublicSubnets:
+    Value: !Join [ ",", [ !Ref PublicSubnetA ]]
+  PrivateSubnets:
+    Value: !Join [ ",", [ !Ref PrivateSubnetB ]]
+  InternetGateway:
+    Value: !Ref InternetGateway
+  EcrRepository:
+    Value: !Ref EcrRepository
+  EcrRepositoryUri:
+    Value: !Join [ ".", [ !Ref "AWS::AccountId", "dkr.ecr", !Ref "AWS::Region", !Join [ "/", [ "amazonaws.com", !Ref "AWS::StackName" ] ] ] ]
+  EcrRepositoryArn:
+    Value: !GetAtt EcrRepository.Arn

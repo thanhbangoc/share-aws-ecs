@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'This template deploys a ECS service'
+Parameters:
+  EcsClusterName:
+    Type: String
+    Default: thanhba-dev-cluster
+  EcrImageUri:
+    Type: String
+    Default: abc
+Resources:
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join ['', [!Ref "AWS::StackName", "-log-group" ]]
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join ['', [!Ref "AWS::StackName", "-role" ]]
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
+  # ContainerSecurityGroup:
+  #   Type: AWS::EC2::SecurityGroup
+  #   DependsOn: VPC
+  #   Properties:
+  #     VpcId: !Ref VPC
+  #     GroupName: ContainerSecurityGroup
+  #     GroupDescription: Security group for container
+  #     SecurityGroupIngress:
+  #       - IpProtocol: tcp
+  #         FromPort: 80
+  #         ToPort: 80
+  #         CidrIp: 0.0.0.0/0
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Join ['', [!Ref "AWS::StackName", "-task" ]]
+      Cpu: 256
+      Memory: 512
+      NetworkMode: bridge
+      ExecutionRoleArn: !Ref ExecutionRole
+      ContainerDefinitions:
+        - Name: !Join ['', [!Ref "AWS::StackName", "-container" ]]
+          Image: !Ref EcrImageUri
+          PortMappings:
+            - HostPort: 80
+              ContainerPort: 3000
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-region: !Ref AWS::Region
+              awslogs-group: !Ref LogGroup
+              awslogs-stream-prefix: ecs
+      RequiresCompatibilities:
+        - EC2
+  EcsService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: !Ref "AWS::StackName"
+      Cluster: !Ref EcsClusterName
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: 1
+      DeploymentConfiguration:
+        MaximumPercent: 100
+        MinimumHealthyPercent: 0
+      LaunchType: EC2
+      # NetworkConfiguration:
+      #   AwsvpcConfiguration:
+      #     AssignPublicIp: ENABLED
+      #     Subnets:
+      #       - !Ref PublicSubnetA
+      #     SecurityGroups:
+      #       - !GetAtt ContainerSecurityGroup.GroupId

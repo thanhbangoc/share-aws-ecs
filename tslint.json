@@ -1,0 +1,59 @@
+{
+  "extends": [
+    "tslint:latest",
+    "tslint-eslint-rules",
+    "tslint-config-standard",
+    "tslint-config-airbnb"
+  ],
+  "rules": {
+    "no-implicit-dependencies": [true, "dev"],
+    "interface-name": false,
+    "function-name": [
+      true,
+      {
+        "method-regex": "^[a-zA-Z][\\w\\d]+$",
+        "private-method-regex": "^[a-zA-Z][\\w\\d]+$",
+        "protected-method-regex": "^[a-zA-Z][\\w\\d]+$",
+        "static-method-regex": "^[a-zA-Z_\\d]+$",
+        "function-regex": "^[a-zA-Z][\\w\\d]+$"
+      }
+    ],
+    "object-shorthand-properties-first": false,
+    "no-floating-promises": false,
+    "newline-before-return": true,
+    "indent": [true, "spaces", 2],
+    "ter-indent": [false, 2],
+    "semicolon": [true, "always"],
+    "max-line-length": [false],
+    "ter-max-len": [
+      false,
+      130,
+      {
+        "ignoreComments": true
+      }
+    ],
+    "no-angle-bracket-type-assertion": false,
+    "no-object-literal-type-assertion": [false],
+    "object-literal-sort-keys": false,
+    "no-default-export": false,
+    "ter-func-call-spacing": [true],
+    "member-access": false,
+    "curly": true,
+    "trailing-comma": [
+      true,
+      {
+        "multiline": "always",
+        "singleline": "never"
+      }
+    ],
+    "object-literal-key-quotes": [true, "consistent-as-needed"],
+    "object-curly-spacing": [true, "always"],
+    "array-bracket-spacing": [true, "never"],
+    "space-before-function-paren": [false],
+    "whitespace": [false],
+    "space-in-parens": [true, "never"],
+    "no-submodule-imports": false,
+    "return-undefined": false,
+    "await-promise": [true, "Thenable", "Bluebird"]
+  }
+}
